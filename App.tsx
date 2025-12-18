@@ -204,6 +204,7 @@ const App: React.FC = () => {
               stats={stats} 
               logs={logs} 
               onViewAllAttendance={() => setActiveTab('attendance')} 
+              onNavigate={setActiveTab}
             />
           )}
           {activeTab === 'attendance' && <Monitor logs={logs} />}

@@ -9,9 +9,10 @@ interface DashboardProps {
   stats: DashboardStats;
   logs: AttendanceLog[];
   onViewAllAttendance: () => void;
+  onNavigate: (tab: 'dashboard' | 'attendance' | 'employees' | 'reports' | 'config' | 'users') => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ stats, logs, onViewAllAttendance }) => {
+const Dashboard: React.FC<DashboardProps> = ({ stats, logs, onViewAllAttendance, onNavigate }) => {
   return (
     <div className="space-y-10 animate-in fade-in duration-700 slide-in-from-bottom-4">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -21,40 +22,49 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, logs, onViewAllAttendance 
         </div>
       </header>
 
-      {/* TARJETAS DE ESTADÍSTICAS */}
+      {/* TARJETAS DE ESTADÍSTICAS INTERACTIVAS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Personal */}
-        <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center gap-8 group transition-all hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1">
-          <div className="bg-indigo-50 p-6 rounded-[1.5rem] text-indigo-600 transition-colors group-hover:bg-indigo-600 group-hover:text-white">
+        {/* Personal - Acceso Rápido a Gestión de Personal */}
+        <button 
+          onClick={() => onNavigate('employees')}
+          className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center gap-8 group transition-all hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1 cursor-pointer text-left w-full"
+        >
+          <div className="bg-indigo-50 p-6 rounded-[1.5rem] text-indigo-600 transition-colors group-hover:bg-indigo-600 group-hover:text-white shrink-0">
             <Users className="w-8 h-8" />
           </div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Personal Activo</p>
             <p className="text-5xl font-black text-slate-900 mt-1">{stats.total_employees}</p>
           </div>
-        </div>
+        </button>
         
-        {/* Asistencias */}
-        <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center gap-8 group transition-all hover:shadow-xl hover:shadow-emerald-500/5 hover:-translate-y-1">
-          <div className="bg-emerald-50 p-6 rounded-[1.5rem] text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
+        {/* Asistencias - Acceso Rápido a Reportes */}
+        <button 
+          onClick={() => onNavigate('reports')}
+          className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center gap-8 group transition-all hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 cursor-pointer text-left w-full"
+        >
+          <div className="bg-emerald-50 p-6 rounded-[1.5rem] text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white shrink-0">
             <CheckCircle2 className="w-8 h-8" />
           </div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Asistencias Hoy</p>
             <p className="text-5xl font-black text-slate-900 mt-1">{stats.today_attendance}</p>
           </div>
-        </div>
+        </button>
 
-        {/* Retardos */}
-        <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center gap-8 group transition-all hover:shadow-xl hover:shadow-rose-500/5 hover:-translate-y-1">
-          <div className="bg-rose-50 p-6 rounded-[1.5rem] text-rose-600 transition-colors group-hover:bg-rose-600 group-hover:text-white">
+        {/* Retardos - Acceso Rápido a Reportes de Incidencias */}
+        <button 
+          onClick={() => onNavigate('reports')}
+          className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center gap-8 group transition-all hover:shadow-xl hover:shadow-rose-500/10 hover:-translate-y-1 cursor-pointer text-left w-full"
+        >
+          <div className="bg-rose-50 p-6 rounded-[1.5rem] text-rose-600 transition-colors group-hover:bg-rose-600 group-hover:text-white shrink-0">
             <AlertCircle className="w-8 h-8" />
           </div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Retardos Det.</p>
             <p className="text-5xl font-black text-slate-900 mt-1">{stats.late_arrivals}</p>
           </div>
-        </div>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -76,7 +86,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, logs, onViewAllAttendance 
           </div>
         </div>
 
-        {/* FEED DE ÚLTIMAS MARCAS (RESTAURADO) */}
+        {/* FEED DE ÚLTIMAS MARCAS */}
         <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full min-h-[400px]">
           <div className="flex items-center justify-between mb-10">
             <h4 className="text-xl font-black text-slate-900 italic flex items-center gap-3">
