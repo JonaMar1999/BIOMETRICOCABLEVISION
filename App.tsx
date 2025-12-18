@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Users, ClipboardList, BarChart3, Fingerprint, LayoutDashboard, 
-  ShieldCheck, Settings, LogOut, Search, Bell
+  ShieldCheck, Settings, LogOut, Search, Bell, AlertTriangle, X
 } from 'lucide-react';
 import { Employee, AttendanceLog, DashboardStats, User, Role } from './types';
 import Dashboard from './components/Dashboard';
@@ -32,21 +32,30 @@ const INITIAL_LOGS: AttendanceLog[] = [
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'reports' | 'config' | 'users'>('dashboard');
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   
   // Estados centralizados para simular base de datos
   const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
   const [logs, setLogs] = useState<AttendanceLog[]>(INITIAL_LOGS);
   const [currentUser] = useState<User>({ username: 'admin_master', full_name: 'Jonathan Martinez', role: 'SuperAdmin' });
 
-  // Estadísticas calculadas en tiempo real desde el Mock State
+  // Estadísticas calculadas en tiempo real
   const stats: DashboardStats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     return {
       total_employees: employees.length,
       today_attendance: logs.filter(l => l.att_time.startsWith(today) || l.att_time.startsWith('2024-05-20')).length,
-      late_arrivals: 2,
+      late_arrivals: logs.filter(l => l.status === 0 && l.att_time.split('T')[1] > "08:00:00").length,
     };
   }, [employees, logs]);
+
+  // Lógica de Alertas Recientes para el Panel de Notificaciones
+  const alerts = useMemo(() => {
+    return logs
+      .filter(l => l.status === 0 && l.att_time.split('T')[1] > "08:00:00")
+      .slice(-5)
+      .reverse();
+  }, [logs]);
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 overflow-hidden font-['Inter']">
@@ -117,10 +126,53 @@ const App: React.FC = () => {
             <input type="text" placeholder="Buscar en el sistema..." className="bg-transparent outline-none text-xs font-bold text-slate-600 w-full" />
           </div>
           <div className="flex items-center gap-6">
-            <button className="relative p-2 text-slate-400 hover:text-indigo-600 transition-colors">
-              <Bell className="w-6 h-6" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
-            </button>
+            
+            {/* BOTÓN CAMPANA Y PANEL DE NOTIFICACIONES */}
+            <div className="relative">
+              <button 
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                className={`relative p-2 rounded-xl transition-all ${isNotificationsOpen ? 'bg-indigo-50 text-indigo-600 shadow-inner' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50'}`}
+              >
+                <Bell className="w-6 h-6" />
+                {alerts.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+                )}
+              </button>
+
+              {isNotificationsOpen && (
+                <div className="absolute right-0 mt-4 w-80 bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+                  <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                    <h3 className="text-sm font-black italic text-slate-900 uppercase tracking-tight">Alertas Recientes</h3>
+                    <span className="px-2 py-0.5 bg-rose-100 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-widest">{alerts.length} Críticas</span>
+                  </div>
+                  <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-2">
+                    {alerts.map((alert, i) => (
+                      <div key={i} className="p-4 rounded-2xl hover:bg-slate-50 transition-colors flex gap-4 items-start group">
+                        <div className="mt-1 p-2 bg-rose-50 text-rose-500 rounded-xl group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                          <AlertTriangle className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-slate-800 tracking-tight leading-tight">{alert.first_name} tiene un retardo detectado</p>
+                          <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">
+                            Entrada: {new Date(alert.att_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {alerts.length === 0 && (
+                      <div className="p-10 text-center space-y-3 opacity-20">
+                        <Bell className="w-8 h-8 mx-auto" />
+                        <p className="text-[10px] font-black uppercase tracking-widest">Sin notificaciones nuevas</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4 bg-slate-50 border-t border-slate-100">
+                     <button onClick={() => setIsNotificationsOpen(false)} className="w-full py-3 bg-white border border-slate-200 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 transition-colors">Cerrar Panel</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="h-8 w-[1px] bg-slate-200 mx-2"></div>
             <div className="flex flex-col items-end">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Biometric Engine</p>
