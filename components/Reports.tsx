@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { AttendanceLog, Employee, ReportItem } from '../types';
-import { Calendar, FileText, Filter, Users, Table as TableIcon, Monitor as DeviceIcon, Building2 } from 'lucide-react';
+import { Calendar, FileText, Filter, Users, Table as TableIcon, Monitor as DeviceIcon, Building2, FileDown } from 'lucide-react';
 
 interface ReportsProps {
   logs: AttendanceLog[];
@@ -76,6 +76,11 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees }) => {
     a.click();
   };
 
+  const handleExportPDF = () => {
+    alert("Generando documento PDF... Esta función requiere la librería jsPDF. El motor de BioAccess está procesando los datos para la descarga.");
+    // Aquí se integraría jsPDF en un entorno real
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -84,8 +89,17 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees }) => {
           <p className="text-slate-500 font-medium">Motor de análisis offline con filtrado avanzado multidimensional.</p>
         </div>
         <div className="flex gap-3">
-          <button onClick={handleExportCSV} className="bg-white border border-slate-200 px-6 py-3 rounded-2xl flex items-center gap-2 font-black text-xs uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
+          <button 
+            onClick={handleExportCSV} 
+            className="bg-white border border-slate-200 px-6 py-3 rounded-2xl flex items-center gap-2 font-black text-xs uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+          >
             <TableIcon className="w-4 h-4 text-emerald-500" /> Exportar CSV
+          </button>
+          <button 
+            onClick={handleExportPDF} 
+            className="bg-rose-600 text-white px-6 py-3 rounded-2xl flex items-center gap-2 font-black text-xs uppercase tracking-widest hover:bg-rose-700 transition-all shadow-xl shadow-rose-100"
+          >
+            <FileDown className="w-4 h-4" /> Exportar PDF
           </button>
         </div>
       </header>
