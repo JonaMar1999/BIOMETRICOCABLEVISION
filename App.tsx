@@ -11,6 +11,7 @@ import EmployeeManager from './components/EmployeeManager';
 import Reports from './components/Reports';
 import UserRoles from './components/UserRoles';
 import Config from './components/Config';
+import Login from './components/Login';
 
 // --- FUENTE DE VERDAD: MOCK DATA INICIAL ---
 const INITIAL_EMPLOYEES: Employee[] = [
@@ -31,6 +32,7 @@ const INITIAL_LOGS: AttendanceLog[] = [
 ];
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'reports' | 'config' | 'users'>('dashboard');
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   
@@ -57,8 +59,17 @@ const App: React.FC = () => {
       .reverse();
   }, [logs]);
 
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setActiveTab('dashboard'); // Reset tab on logout
+  };
+
+  if (!isAuthenticated) {
+    return <Login onLogin={() => setIsAuthenticated(true)} />;
+  }
+
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 overflow-hidden font-['Inter']">
+    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 overflow-hidden font-['Inter'] animate-in fade-in duration-700">
       {/* SIDEBAR DE NAVEGACIÓN PROFESIONAL */}
       <aside className="w-full md:w-80 bg-slate-900 text-white p-8 shrink-0 flex flex-col shadow-2xl z-20 overflow-y-auto transition-all">
         <div className="flex items-center gap-4 mb-14 px-2">
@@ -111,7 +122,10 @@ const App: React.FC = () => {
                 <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{currentUser.role}</p>
               </div>
            </div>
-           <button className="w-full mt-4 flex items-center justify-center gap-2 py-3 text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] hover:bg-rose-500/10 rounded-xl transition-all">
+           <button 
+             onClick={handleLogout}
+             className="w-full mt-4 flex items-center justify-center gap-2 py-3 text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] hover:bg-rose-500/10 rounded-xl transition-all"
+            >
              <LogOut className="w-3 h-3" /> Cerrar Sesión
            </button>
         </div>
