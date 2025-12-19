@@ -4,7 +4,7 @@ import { AttendanceLog, Employee, ReportItem, Department } from '../types';
 import { 
   Calendar, Filter, Users, Table as TableIcon, 
   Monitor as DeviceIcon, Building2, FileDown, 
-  AlertCircle, CheckCircle, Clock, Eye, Info 
+  AlertCircle, CheckCircle, Clock, Eye, Info, X, MapPin, Fingerprint
 } from 'lucide-react';
 
 interface ReportsProps {
@@ -22,26 +22,25 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
     search: ''
   });
 
+  const [activeStatusFilter, setActiveStatusFilter] = useState<'all' | 'INASISTENCIA' | 'SALIDA PENDIENTE' | 'PRESENTE'>('all');
+  const [selectedDetailItem, setSelectedDetailItem] = useState<any | null>(null);
+
   // Generar reporte avanzado (Cruce de Empleados vs Días)
-  const reportData = useMemo(() => {
+  const fullReportData = useMemo(() => {
     const data: any[] = [];
     const startDate = new Date(filters.start);
     const endDate = new Date(filters.end);
     
-    // Iterar por cada día del rango
+    // Clonar para no mutar el original en el bucle
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().split('T')[0];
       
-      // Para cada día, verificar a todos los empleados
       employees.forEach(emp => {
-        // Filtro por departamento en la fuente
         if (filters.department !== 'all' && emp.department !== filters.department) return;
         
-        // Filtro por búsqueda de nombre/id
         const fullName = `${emp.first_name} ${emp.last_name || ''}`.toLowerCase();
         if (filters.search && !fullName.includes(filters.search.toLowerCase()) && !emp.enroll_number.includes(filters.search)) return;
 
-        // Buscar logs de este empleado en esta fecha
         const dayLogs = logs.filter(l => 
           l.enroll_number === emp.enroll_number && 
           l.att_time.startsWith(dateStr)
@@ -49,11 +48,8 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
 
         let entry = dayLogs.find(l => l.status === 0)?.att_time || null;
         let exit = dayLogs.slice().reverse().find(l => l.status === 1)?.att_time || null;
-        
-        // Dispositivo usado (el primero que aparezca en el día)
         const deviceUsed = dayLogs.length > 0 ? dayLogs[0].device_id : '--';
 
-        // Calcular Horas
         let totalHrs = 0;
         let extraHrs = 0;
         if (entry && exit) {
@@ -64,7 +60,6 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
           }
         }
 
-        // Determinar Estado
         let status = 'INASISTENCIA';
         if (entry && exit) status = 'PRESENTE';
         else if (entry && !exit) status = 'SALIDA PENDIENTE';
@@ -84,22 +79,35 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
         });
       });
     }
-
-    return data.sort((a, b) => b.date.localeCompare(a.date));
+    return data;
   }, [logs, employees, filters]);
 
-  // KPIs del reporte actual
+  // Filtrado final por estado (seleccionado desde las tarjetas)
+  const displayedData = useMemo(() => {
+    let data = [...fullReportData];
+    if (activeStatusFilter !== 'all') {
+      data = data.filter(item => item.status === activeStatusFilter);
+    }
+    return data.sort((a, b) => b.date.localeCompare(a.date));
+  }, [fullReportData, activeStatusFilter]);
+
+  // KPIs del reporte actual (siempre basados en la data completa del rango)
   const stats = useMemo(() => {
     return {
-      inasistencias: reportData.filter(i => i.status === 'INASISTENCIA').length,
-      pendientes: reportData.filter(i => i.status === 'SALIDA PENDIENTE').length,
-      horas_totales: reportData.reduce((acc, curr) => acc + (curr.hours_worked || 0), 0).toFixed(1)
+      inasistencias: fullReportData.filter(i => i.status === 'INASISTENCIA').length,
+      pendientes: fullReportData.filter(i => i.status === 'SALIDA PENDIENTE').length,
+      presentes: fullReportData.filter(i => i.status === 'PRESENTE').length,
+      horas_totales: fullReportData.reduce((acc, curr) => acc + (curr.hours_worked || 0), 0).toFixed(1)
     };
-  }, [reportData]);
+  }, [fullReportData]);
+
+  const toggleStatusFilter = (status: 'INASISTENCIA' | 'SALIDA PENDIENTE' | 'PRESENTE') => {
+    setActiveStatusFilter(prev => prev === status ? 'all' : status);
+  };
 
   const handleExportCSV = () => {
     const headers = "Fecha,Enroll ID,Empleado,Departamento,Entrada,Salida,Estado,Horas,Extra\n";
-    const csv = reportData.map(i => {
+    const csv = displayedData.map(i => {
       const deptName = departments.find(d => d.id === i.department)?.name || i.department;
       return `${i.date},${i.enroll_number},${i.first_name} ${i.last_name || ''},${deptName},${i.in || ''},${i.out || ''},${i.status},${i.hours_worked},${i.extra_hours}`;
     }).join('\n');
@@ -107,9 +115,18 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `reporte_asistencia_${filters.start}.csv`;
+    a.download = `reporte_asistencia.csv`;
     a.click();
   };
+
+  // Obtener logs específicos para el modal de detalle
+  const detailLogs = useMemo(() => {
+    if (!selectedDetailItem) return [];
+    return logs.filter(l => 
+      l.enroll_number === selectedDetailItem.enroll_number && 
+      l.att_time.startsWith(selectedDetailItem.date)
+    ).sort((a, b) => a.att_time.localeCompare(b.att_time));
+  }, [logs, selectedDetailItem]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -130,9 +147,19 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
 
       {/* FILTROS AVANZADOS */}
       <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm space-y-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Filter className="w-4 h-4 text-indigo-500" />
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Filtros de Búsqueda</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-indigo-500" />
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Filtros de Búsqueda</span>
+          </div>
+          {activeStatusFilter !== 'all' && (
+            <button 
+              onClick={() => setActiveStatusFilter('all')}
+              className="text-[9px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-lg hover:bg-indigo-100 transition-colors"
+            >
+              Limpiar Filtro de Estado
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 items-end">
           <div>
@@ -157,38 +184,61 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
         </div>
       </div>
 
-      {/* RESUMEN DE INCIDENCIAS */}
+      {/* RESUMEN DE INCIDENCIAS INTERACTIVO */}
       <div className="flex flex-wrap gap-4">
-        <div className="bg-rose-50 border border-rose-100 px-6 py-4 rounded-[1.5rem] flex items-center gap-4">
-          <div className="w-10 h-10 bg-rose-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-rose-200">
+        <button 
+          onClick={() => toggleStatusFilter('INASISTENCIA')}
+          className={`group flex-1 min-w-[200px] border px-6 py-4 rounded-[1.5rem] flex items-center gap-4 transition-all duration-300 ${
+            activeStatusFilter === 'INASISTENCIA' 
+            ? 'bg-rose-500 border-rose-600 shadow-xl shadow-rose-200 -translate-y-1 scale-[1.02]' 
+            : 'bg-rose-50 border-rose-100 hover:bg-rose-100 shadow-sm'
+          }`}
+        >
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors ${activeStatusFilter === 'INASISTENCIA' ? 'bg-white text-rose-500' : 'bg-rose-500 text-white shadow-rose-200'}`}>
             <AlertCircle className="w-5 h-5" />
           </div>
-          <div>
-            <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest leading-none">Inasistencias</p>
-            <p className="text-xl font-black text-rose-600">{stats.inasistencias}</p>
+          <div className="text-left">
+            <p className={`text-[10px] font-black uppercase tracking-widest leading-none ${activeStatusFilter === 'INASISTENCIA' ? 'text-rose-100' : 'text-rose-400'}`}>Inasistencias</p>
+            <p className={`text-xl font-black ${activeStatusFilter === 'INASISTENCIA' ? 'text-white' : 'text-rose-600'}`}>{stats.inasistencias}</p>
           </div>
-        </div>
-        <div className="bg-orange-50 border border-orange-100 px-6 py-4 rounded-[1.5rem] flex items-center gap-4">
-          <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-200">
+        </button>
+
+        <button 
+          onClick={() => toggleStatusFilter('SALIDA PENDIENTE')}
+          className={`group flex-1 min-w-[200px] border px-6 py-4 rounded-[1.5rem] flex items-center gap-4 transition-all duration-300 ${
+            activeStatusFilter === 'SALIDA PENDIENTE' 
+            ? 'bg-orange-500 border-orange-600 shadow-xl shadow-orange-200 -translate-y-1 scale-[1.02]' 
+            : 'bg-orange-50 border-orange-100 hover:bg-orange-100 shadow-sm'
+          }`}
+        >
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors ${activeStatusFilter === 'SALIDA PENDIENTE' ? 'bg-white text-orange-500' : 'bg-orange-500 text-white shadow-orange-200'}`}>
             <Clock className="w-5 h-5" />
           </div>
-          <div>
-            <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest leading-none">Salidas Pendientes</p>
-            <p className="text-xl font-black text-orange-600">{stats.pendientes}</p>
+          <div className="text-left">
+            <p className={`text-[10px] font-black uppercase tracking-widest leading-none ${activeStatusFilter === 'SALIDA PENDIENTE' ? 'text-orange-100' : 'text-orange-400'}`}>Salidas Pendientes</p>
+            <p className={`text-xl font-black ${activeStatusFilter === 'SALIDA PENDIENTE' ? 'text-white' : 'text-orange-600'}`}>{stats.pendientes}</p>
           </div>
-        </div>
-        <div className="bg-indigo-50 border border-indigo-100 px-6 py-4 rounded-[1.5rem] flex items-center gap-4">
-          <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+        </button>
+
+        <button 
+          onClick={() => toggleStatusFilter('PRESENTE')}
+          className={`group flex-1 min-w-[200px] border px-6 py-4 rounded-[1.5rem] flex items-center gap-4 transition-all duration-300 ${
+            activeStatusFilter === 'PRESENTE' 
+            ? 'bg-indigo-500 border-indigo-600 shadow-xl shadow-indigo-200 -translate-y-1 scale-[1.02]' 
+            : 'bg-indigo-50 border-indigo-100 hover:bg-indigo-100 shadow-sm'
+          }`}
+        >
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors ${activeStatusFilter === 'PRESENTE' ? 'bg-white text-indigo-500' : 'bg-indigo-500 text-white shadow-indigo-200'}`}>
              <CheckCircle className="w-5 h-5" />
           </div>
-          <div>
-            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest leading-none">Horas Totales</p>
-            <p className="text-xl font-black text-indigo-600">{stats.horas_totales}h</p>
+          <div className="text-left">
+            <p className={`text-[10px] font-black uppercase tracking-widest leading-none ${activeStatusFilter === 'PRESENTE' ? 'text-indigo-100' : 'text-indigo-400'}`}>Total Presentes</p>
+            <p className={`text-xl font-black ${activeStatusFilter === 'PRESENTE' ? 'text-white' : 'text-indigo-600'}`}>{stats.presentes}</p>
           </div>
-        </div>
+        </button>
       </div>
 
-      {/* TABLA PRINCIPAL ACTUALIZADA */}
+      {/* TABLA PRINCIPAL */}
       <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -202,11 +252,11 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Horas</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Extra</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Estado / Incidencia</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Detalle</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {reportData.map((item, idx) => (
+              {displayedData.map((item, idx) => (
                 <tr key={idx} className={`transition-colors ${item.status === 'INASISTENCIA' ? 'bg-rose-50/20 hover:bg-rose-50/40' : 'hover:bg-slate-50'}`}>
                   <td className="px-8 py-5 font-bold text-slate-600 text-xs whitespace-nowrap italic">{item.date}</td>
                   <td className="px-8 py-5">
@@ -251,7 +301,10 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
                     </div>
                   </td>
                   <td className="px-8 py-5 text-center">
-                    <button className="p-2.5 hover:bg-white rounded-xl shadow-sm text-slate-400 hover:text-indigo-600 transition-all border border-transparent hover:border-slate-200 group">
+                    <button 
+                      onClick={() => setSelectedDetailItem(item)}
+                      className="p-2.5 hover:bg-white rounded-xl shadow-sm text-slate-400 hover:text-indigo-600 transition-all border border-transparent hover:border-slate-200 group"
+                    >
                       <Eye className="w-4 h-4 group-hover:scale-110 transition-transform" />
                     </button>
                   </td>
@@ -260,15 +313,98 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
             </tbody>
           </table>
         </div>
-        {reportData.length === 0 && (
+        {displayedData.length === 0 && (
           <div className="p-20 text-center space-y-4">
              <div className="bg-slate-50 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto text-slate-200">
                <Info className="w-10 h-10" />
              </div>
-             <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">No hay datos para procesar con los filtros actuales</p>
+             <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">No hay datos para mostrar con el filtro activo</p>
           </div>
         )}
       </div>
+
+      {/* MODAL DE DETALLE DEL DÍA */}
+      {selectedDetailItem && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+            <div className="bg-slate-900 p-8 text-white flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-indigo-500 rounded-2xl flex items-center justify-center shadow-xl">
+                  <Fingerprint className="w-7 h-7" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black italic">Historial Detallado del Día</h3>
+                  <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{selectedDetailItem.date} • {selectedDetailItem.first_name} {selectedDetailItem.last_name}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedDetailItem(null)}
+                className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-all hover:rotate-90"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-10 space-y-8">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estado Final</p>
+                  <p className={`font-black text-lg ${
+                    selectedDetailItem.status === 'PRESENTE' ? 'text-emerald-600' : 
+                    selectedDetailItem.status === 'SALIDA PENDIENTE' ? 'text-orange-600' : 'text-rose-600'
+                  }`}>
+                    {selectedDetailItem.status}
+                  </p>
+                </div>
+                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 text-right">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Horas Registradas</p>
+                  <p className="font-black text-lg text-slate-900">{selectedDetailItem.hours_worked}h {selectedDetailItem.extra_hours > 0 ? `(+${selectedDetailItem.extra_hours}h Extra)` : ''}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                   <Clock className="w-4 h-4 text-indigo-500" />
+                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Línea de Tiempo de Marcas</span>
+                </div>
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  {detailLogs.length > 0 ? detailLogs.map((log, i) => (
+                    <div key={i} className="flex items-center justify-between p-5 bg-white border border-slate-100 rounded-2xl hover:border-indigo-100 transition-colors group">
+                      <div className="flex items-center gap-5">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xs ${log.status === 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
+                          {log.status === 0 ? 'ENTRADA' : 'SALIDA'}
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-800 text-base">{new Date(log.att_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                             <MapPin className="w-3 h-3 text-slate-300" />
+                             <span className="text-[10px] text-slate-400 font-bold uppercase">{log.device_id}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-lg">Verificado</span>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="py-12 text-center bg-rose-50 rounded-[2rem] border border-rose-100">
+                       <AlertCircle className="w-8 h-8 text-rose-300 mx-auto mb-3" />
+                       <p className="text-xs font-black text-rose-400 uppercase tracking-widest">No se encontraron marcas para este día</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setSelectedDetailItem(null)}
+                className="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-3"
+              >
+                Cerrar Historial
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
