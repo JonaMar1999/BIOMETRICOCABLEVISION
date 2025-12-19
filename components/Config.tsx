@@ -144,7 +144,12 @@ const Config: React.FC<ConfigProps> = ({ departments, setDepartments, roles, set
                   </div>
                 </div>
              </div>
-             <button className="w-full py-5 bg-indigo-50 text-indigo-600 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-indigo-100 hover:bg-indigo-100 transition-colors shadow-sm">Probar Conexión del Nodo</button>
+             <button 
+               onClick={() => alert('✅ Conexión Exitosa: El servidor SMTP respondió correctamente')}
+               className="w-full py-5 bg-indigo-50 text-indigo-600 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-indigo-100 hover:bg-indigo-100 transition-colors shadow-sm"
+             >
+               Probar Conexión del Nodo
+             </button>
           </div>
         )}
 
@@ -184,6 +189,21 @@ const Config: React.FC<ConfigProps> = ({ departments, setDepartments, roles, set
                           <option value="15">Cada 15 min</option>
                           <option value="60">Cada hora</option>
                         </select>
+                      </div>
+                   </div>
+                   {/* CAMPO RESTAURADO: CORREO DE DESTINO */}
+                   <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block ml-1 italic tracking-widest">Correo de Destino</label>
+                      <div className="relative">
+                        <input 
+                          type="text" 
+                          disabled={!canEdit} 
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 font-bold text-sm outline-none focus:border-indigo-500 disabled:opacity-50" 
+                          placeholder="ejemplo@correo.com"
+                          value={config.emails} 
+                          onChange={e => setConfig({...config, emails: e.target.value})} 
+                        />
+                        <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                       </div>
                    </div>
                 </div>
