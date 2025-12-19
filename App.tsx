@@ -223,7 +223,7 @@ const App: React.FC = () => {
               departments={departments}
             />
           )}
-          {activeTab === 'users' && <UserRoles />}
+          {activeTab === 'users' && <UserRoles departments={departments} logs={logs} />}
           {activeTab === 'config' && (
             <Config 
               departments={departments}

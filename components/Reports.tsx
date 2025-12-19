@@ -33,44 +33,48 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
     return Array.from(new Set(devices));
   }, [logs]);
 
-  // --- LÓGICA DE AUDITORÍA CRONOLÓGICA ---
+  // --- MOTOR DE GENERACIÓN DE HISTORIAL CRONOLÓGICO ---
   const fullReportData = useMemo(() => {
     const data: any[] = [];
-    const startDate = new Date(filters.start);
-    const endDate = new Date(filters.end);
     
-    // Si hay empleados seleccionados, auditamos solo a ellos
+    // Normalizar fechas para asegurar el ciclo completo día por día
+    const startDate = new Date(filters.start + 'T00:00:00');
+    const endDate = new Date(filters.end + 'T00:00:00');
+    
+    // Identificar empleados bajo auditoría (anclados o filtrados por búsqueda)
     const employeesToAudit = selectedEmployeeIds.length > 0 
       ? employees.filter(e => selectedEmployeeIds.includes(e.enroll_number))
-      : employees;
+      : (filters.search ? employees.filter(emp => {
+          const fullName = `${emp.first_name} ${emp.last_name || ''}`.toLowerCase();
+          return fullName.includes(filters.search.toLowerCase()) || emp.enroll_number.includes(filters.search);
+        }) : employees);
 
-    // Iteramos por rango de fechas
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split('T')[0];
+    // Bucle Cronológico: Generamos una fila por cada día del rango para cada empleado
+    let currentDay = new Date(startDate);
+    while (currentDay <= endDate) {
+      const dateStr = currentDay.toISOString().split('T')[0];
       
       employeesToAudit.forEach(emp => {
-        // Filtro de Departamento
+        // Filtro de Departamento (Segmentación operativa)
         if (filters.department !== 'all' && emp.department !== filters.department) return;
-        
-        // Filtro de Búsqueda por Nombre
-        const fullName = `${emp.first_name} ${emp.last_name || ''}`.toLowerCase();
-        if (filters.search && !fullName.includes(filters.search.toLowerCase()) && !emp.enroll_number.includes(filters.search)) return;
 
-        // Obtener logs del empleado en este día, considerando el filtro de dispositivo
+        // Extraer logs del empleado en esta fecha específica
         let dayLogs = logs.filter(l => 
           l.enroll_number === emp.enroll_number && 
           l.att_time.startsWith(dateStr)
         );
 
-        // Aplicar filtro de equipo si no es "all"
+        // Aplicar filtro de equipo biométrico
         if (filters.device !== 'all') {
           dayLogs = dayLogs.filter(l => l.device_id === filters.device);
         }
 
+        // Determinar Primera Entrada y Última Salida del día
         let entry = dayLogs.find(l => l.status === 0)?.att_time || null;
         let exit = dayLogs.slice().reverse().find(l => l.status === 1)?.att_time || null;
         const deviceUsed = dayLogs.length > 0 ? dayLogs[0].device_id : '--';
 
+        // Lógica de cálculo de horas para auditoría de nómina
         let totalHrs = 0;
         let extraHrs = 0;
         if (entry && exit) {
@@ -83,6 +87,7 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
           }
         }
 
+        // Definición de Estados de Auditoría
         let status = 'INASISTENCIA';
         if (entry && exit) status = 'PRESENTE';
         else if (entry && !exit) status = 'SALIDA PENDIENTE';
@@ -101,6 +106,8 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
           status: status
         });
       });
+      
+      currentDay.setDate(currentDay.getDate() + 1);
     }
     return data;
   }, [logs, employees, filters, selectedEmployeeIds]);
@@ -113,7 +120,7 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
     return data.sort((a, b) => b.date.localeCompare(a.date));
   }, [fullReportData, activeStatusFilter]);
 
-  // Totales Individuales (Solo si hay 1 empleado seleccionado)
+  // Totales Individuales (Solo visibles en auditoría de 1 empleado)
   const individualTotals = useMemo(() => {
     if (selectedEmployeeIds.length !== 1) return null;
     return displayedData.reduce((acc, curr) => ({
@@ -152,7 +159,7 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `auditoria_asistencia.csv`;
+    a.download = `auditoria_completa_${filters.start}_${filters.end}.csv`;
     a.click();
   };
 
@@ -161,11 +168,11 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Cálculo de Horas y Reportes</h2>
-          <p className="text-slate-500 font-medium">Motor de análisis multidimensional para pre-nómina.</p>
+          <p className="text-slate-500 font-medium">Auditoría cronológica diaria para validación de pre-nómina.</p>
         </div>
         <div className="flex gap-3">
           <button onClick={handleExportCSV} className="bg-white border border-slate-200 px-6 py-3 rounded-2xl flex items-center gap-2 font-black text-xs uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
-            <TableIcon className="w-4 h-4 text-emerald-500" /> Exportar CSV
+            <TableIcon className="w-4 h-4 text-emerald-500" /> Exportar Auditoría
           </button>
           <button onClick={() => alert("Función PDF habilitada en entorno de producción.")} className="bg-rose-600 text-white px-6 py-3 rounded-2xl flex items-center gap-2 font-black text-xs uppercase tracking-widest hover:bg-rose-700 transition-all shadow-xl shadow-rose-100">
             <FileDown className="w-4 h-4" /> Exportar PDF
@@ -173,19 +180,19 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
         </div>
       </header>
 
-      {/* SECCIÓN DE FILTROS ACTUALIZADA */}
+      {/* PANEL DE FILTROS DE AUDITORÍA */}
       <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-indigo-500" />
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Auditoría de Personal y Equipos</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Parámetros de Auditoría</span>
           </div>
           {(activeStatusFilter !== 'all' || selectedEmployeeIds.length > 0 || filters.device !== 'all') && (
             <button 
               onClick={() => { setActiveStatusFilter('all'); setSelectedEmployeeIds([]); setFilters(prev => ({...prev, device: 'all'})); }}
               className="text-[9px] font-black text-rose-600 uppercase tracking-widest bg-rose-50 px-3 py-1 rounded-lg hover:bg-rose-100 transition-colors"
             >
-              Restablecer Auditoría
+              Limpiar Todos los Filtros
             </button>
           )}
         </div>
@@ -232,7 +239,7 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
                     ))}
                   </div>
                   <div className="p-2 border-t mt-2">
-                    <button onClick={() => setIsEmployeeSelectorOpen(false)} className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Aplicar</button>
+                    <button onClick={() => setIsEmployeeSelectorOpen(false)} className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Anclar Selección</button>
                   </div>
                 </div>
               )}
@@ -260,14 +267,14 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
           <div>
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Zona / Depto</label>
             <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none font-bold cursor-pointer text-sm" value={filters.department} onChange={e => setFilters({...filters, department: e.target.value})}>
-              <option value="all">Filtro General</option>
+              <option value="all">Cualquier Zona</option>
               {departments.map(dept => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
             </select>
           </div>
         </div>
       </div>
 
-      {/* TARJETAS KPI (Interactivas) */}
+      {/* TARJETAS KPI DE AUDITORÍA */}
       <div className="flex flex-wrap gap-4">
         <button 
           onClick={() => toggleStatusFilter('INASISTENCIA')}
@@ -309,7 +316,7 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
         </button>
       </div>
 
-      {/* TABLA PRINCIPAL DE AUDITORÍA */}
+      {/* TABLA DE AUDITORÍA DIARIA COMPLETA */}
       <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -323,13 +330,13 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Horas</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Extra</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Equipo</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Estado</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Estado Auditoría</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Ver</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {displayedData.map((item, idx) => (
-                <tr key={idx} className={`transition-colors ${item.status === 'INASISTENCIA' ? 'bg-rose-50/20 hover:bg-rose-50/40' : 'hover:bg-slate-50'}`}>
+                <tr key={idx} className={`transition-colors ${item.status === 'INASISTENCIA' ? 'bg-rose-50/40 hover:bg-rose-50/60' : 'hover:bg-slate-50'}`}>
                   <td className="px-8 py-5 font-bold text-slate-600 text-xs whitespace-nowrap italic">{item.date}</td>
                   <td className="px-8 py-5">
                     <p className="font-bold text-slate-800 text-sm leading-tight">{item.first_name} {item.last_name}</p>
@@ -363,7 +370,7 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
                     <div className="flex items-center gap-2">
                        <div className={`w-2 h-2 rounded-full ${
                          item.status === 'PRESENTE' ? 'bg-emerald-500' : 
-                         item.status === 'SALIDA PENDIENTE' ? 'bg-orange-500 animate-pulse' : 'bg-rose-500'
+                         item.status === 'SALIDA PENDIENTE' ? 'bg-orange-500 animate-pulse' : 'bg-rose-500 shadow-sm shadow-rose-200'
                        }`}></div>
                        <span className={`text-[10px] font-black uppercase tracking-widest ${
                          item.status === 'PRESENTE' ? 'text-emerald-600' : 
@@ -387,7 +394,7 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
             {individualTotals && (
               <tfoot className="bg-slate-900 text-white">
                 <tr>
-                  <td colSpan={5} className="px-8 py-6 font-black uppercase tracking-[0.2em] text-[10px]">Resumen de Auditoría Individual</td>
+                  <td colSpan={5} className="px-8 py-6 font-black uppercase tracking-[0.2em] text-[10px]">Resumen Individual Quincenal / Mensual</td>
                   <td className="px-8 py-6">
                     <div className="flex flex-col">
                       <span className="text-indigo-400 text-[9px] font-black uppercase tracking-widest">Ordinarias</span>
@@ -402,8 +409,8 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
                   </td>
                   <td colSpan={3} className="px-8 py-6">
                     <div className="flex flex-col">
-                      <span className="text-rose-400 text-[9px] font-black uppercase tracking-widest">Inasistencias</span>
-                      <span className="text-lg font-black italic">{individualTotals.inasistencias} Días</span>
+                      <span className="text-rose-400 text-[9px] font-black uppercase tracking-widest">Inasistencias / Faltas</span>
+                      <span className="text-lg font-black italic text-rose-500">{individualTotals.inasistencias} Días</span>
                     </div>
                   </td>
                 </tr>
@@ -411,6 +418,14 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
             )}
           </table>
         </div>
+        {displayedData.length === 0 && (
+          <div className="p-20 text-center space-y-4">
+             <div className="bg-slate-50 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto text-slate-200">
+               <Info className="w-10 h-10" />
+             </div>
+             <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Sin datos para mostrar con el filtro actual</p>
+          </div>
+        )}
       </div>
 
       {/* MODAL DE DETALLE DEL DÍA */}
@@ -421,7 +436,7 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 bg-indigo-500 rounded-2xl flex items-center justify-center shadow-xl"><Fingerprint className="w-7 h-7" /></div>
                 <div>
-                  <h3 className="text-xl font-black italic">Historial Detallado</h3>
+                  <h3 className="text-xl font-black italic">Auditoría de Marcaciones</h3>
                   <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{selectedDetailItem.date} • {selectedDetailItem.first_name} {selectedDetailItem.last_name}</p>
                 </div>
               </div>
@@ -431,18 +446,19 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
             <div className="p-10 space-y-8">
               <div className="grid grid-cols-2 gap-6">
                 <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estado</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estatus del Día</p>
                   <p className={`font-black text-lg ${selectedDetailItem.status === 'PRESENTE' ? 'text-emerald-600' : selectedDetailItem.status === 'SALIDA PENDIENTE' ? 'text-orange-600' : 'text-rose-600'}`}>{selectedDetailItem.status}</p>
                 </div>
                 <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 text-right">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cómputo Horas</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cómputo Total</p>
                   <p className="font-black text-lg text-slate-900">{selectedDetailItem.hours_worked}h {selectedDetailItem.extra_hours > 0 ? `(+${selectedDetailItem.extra_hours}h Extra)` : ''}</p>
                 </div>
               </div>
               <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-2"><Clock className="w-4 h-4 text-indigo-500" /><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cronología de Marcaciones</span></div>
+                <div className="flex items-center gap-2 mb-2"><Clock className="w-4 h-4 text-indigo-500" /><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cronología Registrada</span></div>
                 <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                  {logs.filter(l => l.enroll_number === selectedDetailItem.enroll_number && l.att_time.startsWith(selectedDetailItem.date)).map((log, i) => (
+                  {logs.filter(l => l.enroll_number === selectedDetailItem.enroll_number && l.att_time.startsWith(selectedDetailItem.date)).length > 0 ? 
+                    logs.filter(l => l.enroll_number === selectedDetailItem.enroll_number && l.att_time.startsWith(selectedDetailItem.date)).map((log, i) => (
                     <div key={i} className="flex items-center justify-between p-5 bg-white border border-slate-100 rounded-2xl group">
                       <div className="flex items-center gap-5">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xs ${log.status === 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>{log.status === 0 ? 'ENTRADA' : 'SALIDA'}</div>
@@ -453,7 +469,11 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
                       </div>
                       <div className="text-right"><span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-lg">ID #{log.id}</span></div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="p-10 text-center bg-rose-50 border border-rose-100 rounded-3xl">
+                       <p className="text-xs font-black text-rose-400 uppercase tracking-widest">Sin marcaciones detectadas</p>
+                    </div>
+                  )}
                 </div>
               </div>
               <button onClick={() => setSelectedDetailItem(null)} className="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-3">Finalizar Revisión</button>

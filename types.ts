@@ -9,6 +9,8 @@ export interface Role {
   id: string;
   name: string;
   permissions: string[];
+  allowed_departments?: string[];
+  allowed_devices?: string[];
 }
 
 export interface Department {
