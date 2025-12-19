@@ -31,7 +31,11 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
 
   const closeModal = () => { setIsModalOpen(false); setEditingEmployee(null); setFormData({ enroll_number: '', first_name: '', last_name: '', department: '' }); };
 
-  const filtered = employees.filter(e => e.first_name.toLowerCase().includes(searchTerm.toLowerCase()) || e.enroll_number.includes(searchTerm));
+  const filtered = employees.filter(e => 
+    e.first_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (e.last_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    e.enroll_number.includes(searchTerm)
+  );
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -58,11 +62,12 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
 
       <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[700px]">
+          <table className="w-full text-left min-w-[800px]">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">ID Enroll</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Apellido</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Zona</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Acciones</th>
               </tr>
@@ -71,7 +76,8 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
               {filtered.map((emp) => (
                 <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-8 py-5 font-mono text-xs font-black text-indigo-600">{emp.enroll_number}</td>
-                  <td className="px-8 py-5 font-bold text-slate-800 text-sm">{emp.first_name} {emp.last_name}</td>
+                  <td className="px-8 py-5 font-bold text-slate-800 text-sm">{emp.first_name}</td>
+                  <td className="px-8 py-5 font-bold text-slate-800 text-sm">{emp.last_name || '--'}</td>
                   <td className="px-8 py-5">
                     <span className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase">{departments.find(d => d.id === emp.department)?.name || emp.department}</span>
                   </td>
@@ -97,12 +103,49 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
             </div>
             <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
               <div className="space-y-4">
-                <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">ID</label><input required type="text" className="w-full bg-slate-50 border rounded-2xl px-4 py-3 outline-none font-bold text-sm" value={formData.enroll_number} onChange={e => setFormData({...formData, enroll_number: e.target.value})} /></div>
-                <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Nombre</label><input required type="text" className="w-full bg-slate-50 border rounded-2xl px-4 py-3 outline-none font-bold text-sm" value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} /></div>
-                <div><label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Zona</label><select required className="w-full bg-slate-50 border rounded-2xl px-4 py-3 outline-none font-bold text-sm" value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})}><option value="">- Seleccionar -</option>{departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">ID</label>
+                  <input required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none font-bold text-sm focus:border-indigo-500 transition-all" value={formData.enroll_number} onChange={e => setFormData({...formData, enroll_number: e.target.value})} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Nombre</label>
+                    <input required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none font-bold text-sm focus:border-indigo-500 transition-all" value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Apellido</label>
+                    <input required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none font-bold text-sm focus:border-indigo-500 transition-all" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">Zona</label>
+                  <select required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none font-bold text-sm focus:border-indigo-500 transition-all appearance-none cursor-pointer" value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})}>
+                    <option value="">- Seleccionar -</option>
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </div>
               </div>
-              <button type="submit" className="w-full bg-indigo-600 text-white font-black uppercase tracking-widest py-4 rounded-2xl shadow-xl flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Confirmar</button>
+              <button type="submit" className="w-full bg-indigo-600 text-white font-black uppercase tracking-widest py-4 rounded-2xl shadow-xl flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-95 transition-all">
+                <Save className="w-4 h-4" /> Confirmar
+              </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMACIÓN ELIMINAR */}
+      {confirmDeleteId !== null && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white max-w-sm w-full rounded-[2.5rem] p-10 text-center shadow-2xl animate-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <h4 className="text-xl font-black italic mb-2">¿Eliminar Empleado?</h4>
+            <p className="text-sm text-slate-500 font-medium mb-8">Esta acción eliminará permanentemente al personal seleccionado del sistema.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <button onClick={() => setConfirmDeleteId(null)} className="py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-xs hover:bg-slate-200 transition-all">Cancelar</button>
+              <button onClick={() => { setEmployees(prev => prev.filter(e => e.id !== confirmDeleteId)); setConfirmDeleteId(null); }} className="py-4 bg-rose-600 text-white rounded-2xl font-black uppercase text-xs hover:bg-rose-700 transition-all">Eliminar</button>
+            </div>
           </div>
         </div>
       )}
