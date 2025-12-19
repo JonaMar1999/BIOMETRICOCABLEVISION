@@ -1,6 +1,6 @@
-
 import React, { useState, useMemo } from 'react';
-import { AttendanceLog, Employee, ReportItem, Department } from '../types';
+// Fix: Removed ReportItem import as it is not exported from types.ts and not used in this file
+import { AttendanceLog, Employee, Department } from '../types';
 import { 
   Calendar, Filter, Users, Table as TableIcon, 
   Monitor as DeviceIcon, Building2, FileDown, 

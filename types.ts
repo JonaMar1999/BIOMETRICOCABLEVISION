@@ -38,18 +38,6 @@ export interface AttendanceLog {
   department: string;
 }
 
-export interface ReportItem {
-  date: string;
-  enroll_number: string;
-  first_name: string;
-  last_name: string | null;
-  department: string;
-  device_id: string;
-  in: string | null;
-  out: string | null;
-  hours_worked: string | number;
-}
-
 export interface DashboardStats {
   total_employees: number;
   today_attendance: number;
@@ -57,10 +45,20 @@ export interface DashboardStats {
 }
 
 export const PERMISSIONS = [
-  { id: 'view_monitor', label: 'Ver Monitor en Vivo' },
-  { id: 'view_reports', label: 'Ver Reportes' },
-  { id: 'export_data', label: 'Exportar Datos (PDF/CSV)' },
-  { id: 'edit_personal', label: 'Gestionar Personal (CRUD)' },
-  { id: 'config_system', label: 'Configurar Sistema' },
-  { id: 'manage_users', label: 'Gestionar Usuarios y Roles' },
+  // Módulos
+  { id: 'view_monitor', label: 'Ver Monitor en Vivo', group: 'ACCESO' },
+  { id: 'view_reports', label: 'Ver Reportes', group: 'ACCESO' },
+  { id: 'export_data', label: 'Exportar Datos', group: 'ACCESO' },
+  { id: 'config_system', label: 'Configurar Sistema', group: 'ACCESO' },
+  { id: 'manage_users', label: 'Gestionar Usuarios/Roles', group: 'ACCESO' },
+  
+  // Acciones Personal
+  { id: 'create_employee', label: 'Personal: Crear', group: 'ACCIÓN CRUD' },
+  { id: 'edit_employee', label: 'Personal: Editar', group: 'ACCIÓN CRUD' },
+  { id: 'delete_employee', label: 'Personal: Eliminar', group: 'ACCIÓN CRUD' },
+  
+  // Acciones Departamentos
+  { id: 'create_dept', label: 'Deptos: Crear', group: 'ACCIÓN CRUD' },
+  { id: 'edit_dept', label: 'Deptos: Editar', group: 'ACCIÓN CRUD' },
+  { id: 'delete_dept', label: 'Deptos: Eliminar', group: 'ACCIÓN CRUD' },
 ];

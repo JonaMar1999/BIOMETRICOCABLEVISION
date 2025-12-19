@@ -1,19 +1,23 @@
 
 import React, { useState } from 'react';
 import { Employee, Department } from '../types';
-import { Edit, Trash2, X, Save, Search, UserPlus } from 'lucide-react';
+import { Edit, Trash2, X, Save, Search, UserPlus, ShieldAlert, AlertCircle } from 'lucide-react';
 
 interface EmployeeManagerProps {
   employees: Employee[];
   setEmployees: React.Dispatch<React.SetStateAction<Employee[]>>;
   departments: Department[];
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
-const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmployees, departments }) => {
+const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmployees, departments, canCreate, canEdit, canDelete }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [formData, setFormData] = useState({ enroll_number: '', first_name: '', last_name: '', department: '' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,15 +43,10 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
     setFormData({ enroll_number: '', first_name: '', last_name: '', department: '' });
   };
 
-  const handleEdit = (emp: Employee) => {
-    setEditingEmployee(emp);
-    setFormData({ enroll_number: emp.enroll_number, first_name: emp.first_name, last_name: emp.last_name || '', department: emp.department });
-    setIsModalOpen(true);
-  };
-
-  const handleDelete = (id: number) => {
-    if (confirm('¿Eliminar este empleado? Esta acción no se puede deshacer.')) {
-      setEmployees(prev => prev.filter(e => e.id !== id));
+  const handleDeleteConfirmed = () => {
+    if (confirmDeleteId) {
+      setEmployees(prev => prev.filter(e => e.id !== confirmDeleteId));
+      setConfirmDeleteId(null);
     }
   };
 
@@ -63,12 +62,18 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
           <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Gestión de Personal</h2>
           <p className="text-slate-500 font-medium">Administra los usuarios autorizados en los dispositivos biométricos.</p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl flex items-center gap-2 font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-indigo-100"
-        >
-          <UserPlus className="w-4 h-4" /> Registrar Nuevo
-        </button>
+        {canCreate ? (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl flex items-center gap-2 font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-indigo-100"
+          >
+            <UserPlus className="w-4 h-4" /> Registrar Nuevo
+          </button>
+        ) : (
+          <div className="bg-slate-100 text-slate-400 px-6 py-3 rounded-2xl flex items-center gap-2 font-black text-xs uppercase tracking-widest border border-slate-200 cursor-not-allowed">
+            <ShieldAlert className="w-4 h-4" /> Modo Lectura
+          </div>
+        )}
       </header>
 
       <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex items-center gap-4">
@@ -88,8 +93,7 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
             <tr>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Enroll ID</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nombre Completo</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Departamento</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha Registro</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Zona</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Acciones</th>
             </tr>
           </thead>
@@ -101,13 +105,23 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
                   <p className="font-bold text-slate-800">{emp.first_name} {emp.last_name}</p>
                 </td>
                 <td className="px-8 py-5">
-                  <span className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">{emp.department}</span>
+                  <span className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                    {departments.find(d => d.id === emp.department)?.name || emp.department}
+                  </span>
                 </td>
-                <td className="px-8 py-5 text-xs text-slate-400 font-bold">{new Date(emp.created_at).toLocaleDateString()}</td>
                 <td className="px-8 py-5">
                   <div className="flex items-center justify-center gap-2">
-                    <button onClick={() => handleEdit(emp)} className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors"><Edit className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(emp.id)} className="p-2 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                    {canEdit ? (
+                      <button onClick={() => { setEditingEmployee(emp); setFormData({ enroll_number: emp.enroll_number, first_name: emp.first_name, last_name: emp.last_name || '', department: emp.department }); setIsModalOpen(true); }} className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors"><Edit className="w-4 h-4" /></button>
+                    ) : (
+                      <div className="p-2 text-slate-200 cursor-not-allowed"><Edit className="w-4 h-4" /></div>
+                    )}
+                    
+                    {canDelete ? (
+                      <button onClick={() => setConfirmDeleteId(emp.id)} className="p-2 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                    ) : (
+                      <div className="p-2 text-slate-200 cursor-not-allowed"><Trash2 className="w-4 h-4" /></div>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -116,11 +130,26 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
         </table>
       </div>
 
+      {/* MODAL ALERTA ELIMINAR */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="bg-white max-w-sm w-full rounded-[2.5rem] p-10 text-center shadow-2xl animate-in zoom-in">
+             <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-6"><AlertCircle className="w-8 h-8" /></div>
+             <h4 className="text-xl font-black italic mb-2">¿Seguro de eliminar?</h4>
+             <p className="text-xs text-slate-500 font-medium mb-8">Esta acción desvinculará permanentemente al empleado del sistema de asistencia.</p>
+             <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setConfirmDeleteId(null)} className="py-3 bg-slate-100 text-slate-400 rounded-xl font-black uppercase text-[10px] tracking-widest">Cancelar</button>
+                <button onClick={handleDeleteConfirmed} className="py-3 bg-rose-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-rose-100">Confirmar</button>
+             </div>
+          </div>
+        </div>
+      )}
+
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in duration-200">
             <div className="bg-indigo-600 p-8 text-white flex items-center justify-between">
-              <h3 className="text-xl font-black italic">{editingEmployee ? 'Editar Empleado' : 'Nuevo Registro'}</h3>
+              <h3 className="text-xl font-black italic">{editingEmployee ? 'Ficha de Empleado' : 'Nuevo Registro'}</h3>
               <button onClick={closeModal} className="hover:rotate-90 transition-transform"><X /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
@@ -152,7 +181,7 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
                 </div>
               </div>
               <button type="submit" className="w-full bg-indigo-600 text-white font-black uppercase tracking-widest py-4 rounded-2xl shadow-xl shadow-indigo-100 flex items-center justify-center gap-2">
-                <Save className="w-4 h-4" /> {editingEmployee ? 'Actualizar' : 'Guardar Empleado'}
+                <Save className="w-4 h-4" /> {editingEmployee ? 'Guardar Cambios' : 'Activar Personal'}
               </button>
             </form>
           </div>
