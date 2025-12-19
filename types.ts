@@ -26,6 +26,7 @@ export interface Employee {
   department: string;
   status: 'active' | 'inactive';
   created_at: string;
+  origin_device?: string; // Nuevo: Rastreo de hardware de origen
 }
 
 export interface AttendanceLog {

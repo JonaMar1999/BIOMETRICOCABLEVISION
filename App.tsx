@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Users, ClipboardList, BarChart3, Fingerprint, LayoutDashboard, 
   ShieldCheck, Settings, LogOut, Search, Bell, AlertTriangle, X, Building2, Menu as MenuIcon
@@ -15,19 +15,33 @@ import Login from './components/Login';
 import DepartmentManager from './components/DepartmentManager';
 
 const INITIAL_EMPLOYEES: Employee[] = [
-  { id: 1, enroll_number: '1001', first_name: 'Jonathan', last_name: 'Martinez', department: 'DEP-001', status: 'active', created_at: '2024-01-15' },
-  { id: 2, enroll_number: '1002', first_name: 'Ana', last_name: 'García', department: 'DEP-002', status: 'active', created_at: '2024-02-10' },
-  { id: 3, enroll_number: '1003', first_name: 'Carlos', last_name: 'Ruiz', department: 'DEP-003', status: 'active', created_at: '2024-03-01' },
+  { id: 1, enroll_number: '1001', first_name: 'Jonathan', last_name: 'Martinez', department: 'DEP-001', status: 'active', created_at: '2024-01-15', origin_device: 'ZK-T88-MAIN' },
+  { id: 2, enroll_number: '1002', first_name: 'Ana', last_name: 'García', department: 'DEP-002', status: 'active', created_at: '2024-02-10', origin_device: 'ZK-T88-MAIN' },
+  { id: 3, enroll_number: '1003', first_name: 'Carlos', last_name: 'Ruiz', department: 'DEP-003', status: 'active', created_at: '2024-03-01', origin_device: 'ZK-T88-ENTRY' },
 ];
 
+// DATA SIMULADA DE ALTA FIDELIDAD (ESCENARIO DE PRUEBA)
 const INITIAL_LOGS: AttendanceLog[] = [
-  { id: 1, enroll_number: '1001', first_name: 'Jonathan', att_time: '2024-05-20T08:05:22', status: 0, device_id: 'ZK-T88-MAIN', department: 'DEP-001' },
-  { id: 2, enroll_number: '1002', first_name: 'Ana', att_time: '2024-05-20T08:12:10', status: 0, device_id: 'ZK-T88-MAIN', department: 'DEP-002' },
+  // Jonathan: Jornada Completa (OK)
+  { id: 1, enroll_number: '1001', first_name: 'Jonathan', att_time: '2024-05-20T08:00:00', status: 0, device_id: 'ZK-T88-MAIN', department: 'DEP-001' },
+  { id: 2, enroll_number: '1001', first_name: 'Jonathan', att_time: '2024-05-20T17:00:00', status: 1, device_id: 'ZK-T88-MAIN', department: 'DEP-001' },
+  
+  // Ana: Jornada Completa (OK)
+  { id: 3, enroll_number: '1002', first_name: 'Ana', att_time: '2024-05-20T08:15:22', status: 0, device_id: 'ZK-T88-MAIN', department: 'DEP-002' },
+  { id: 4, enroll_number: '1002', first_name: 'Ana', att_time: '2024-05-20T16:45:10', status: 1, device_id: 'ZK-T88-MAIN', department: 'DEP-002' },
+
+  // Carlos: Jornada Completa (OK)
+  { id: 5, enroll_number: '1003', first_name: 'Carlos', att_time: '2024-05-20T08:30:00', status: 0, device_id: 'ZK-T88-ENTRY', department: 'DEP-003' },
+  { id: 6, enroll_number: '1003', first_name: 'Carlos', att_time: '2024-05-20T17:30:00', status: 1, device_id: 'ZK-T88-ENTRY', department: 'DEP-003' },
+  
+  // ID 1014: INCIDENCIA (Solo Entrada, Sin Salida)
+  { id: 7, enroll_number: '1014', first_name: '1014', att_time: '2024-05-20T09:15:00', status: 0, device_id: 'ZK-T88-OFFICE', department: 'DEP-001' }, 
 ];
 
 const INITIAL_DEPARTMENTS: Department[] = [
   { id: 'DEP-001', name: 'Sistemas' },
   { id: 'DEP-002', name: 'RRHH' },
+  { id: 'DEP-003', name: 'Producción' },
 ];
 
 const INITIAL_ROLES: Role[] = [
@@ -35,15 +49,8 @@ const INITIAL_ROLES: Role[] = [
     id: 'SuperAdmin', 
     name: 'Super Administrador', 
     permissions: PERMISSIONS.map(p => p.id), 
-    allowed_departments: ['DEP-001', 'DEP-002'], 
-    allowed_devices: ['ZK-T88-MAIN'] 
-  },
-  { 
-    id: 'RRHH', 
-    name: 'Recursos Humanos', 
-    permissions: ['view_reports', 'create_employee', 'edit_employee'], 
-    allowed_departments: ['DEP-002'], 
-    allowed_devices: ['ZK-T88-MAIN'] 
+    allowed_departments: ['DEP-001', 'DEP-002', 'DEP-003'], 
+    allowed_devices: ['ZK-T88-MAIN', 'ZK-T88-ENTRY', 'ZK-T88-OFFICE'] 
   }
 ];
 
@@ -63,6 +70,31 @@ const App: React.FC = () => {
     role: 'SuperAdmin' 
   });
 
+  useEffect(() => {
+    const existingEnrollNumbers = new Set(employees.map(e => e.enroll_number));
+    const newEmployeesFromLogs: Employee[] = [];
+
+    logs.forEach(log => {
+      if (!existingEnrollNumbers.has(log.enroll_number)) {
+        newEmployeesFromLogs.push({
+          id: Date.now() + Math.random(),
+          enroll_number: log.enroll_number,
+          first_name: `ID: ${log.enroll_number}`,
+          last_name: '(Pendiente de Revisión)',
+          department: log.department || 'DEP-001',
+          status: 'active',
+          created_at: new Date().toISOString(),
+          origin_device: log.device_id
+        });
+        existingEnrollNumbers.add(log.enroll_number);
+      }
+    });
+
+    if (newEmployeesFromLogs.length > 0) {
+      setEmployees(prev => [...prev, ...newEmployeesFromLogs]);
+    }
+  }, [logs]);
+
   const userPermissions = useMemo(() => {
     const roleDef = roles.find(r => r.id === currentUser.role);
     return roleDef ? roleDef.permissions : [];
@@ -70,22 +102,36 @@ const App: React.FC = () => {
 
   const can = (permission: string) => userPermissions.includes(permission);
 
-  const stats: DashboardStats = useMemo(() => ({
-    total_employees: employees.length,
-    today_attendance: logs.length,
-    late_arrivals: 2,
-  }), [employees, logs]);
+  const stats: DashboardStats = useMemo(() => {
+    // Calculamos incidencias reales para el dashboard
+    const reportData: any[] = [];
+    const uniqueEnrolls = Array.from(new Set(logs.map(l => l.enroll_number)));
+    const today = new Date().toISOString().split('T')[0];
+    
+    let incidenceCount = 0;
+    uniqueEnrolls.forEach(enroll => {
+      const dayLogs = logs.filter(l => l.enroll_number === enroll);
+      const hasEntry = dayLogs.some(l => l.status === 0);
+      const hasExit = dayLogs.some(l => l.status === 1);
+      if (hasEntry && !hasExit) incidenceCount++;
+    });
+
+    return {
+      total_employees: employees.length,
+      today_attendance: logs.length,
+      late_arrivals: incidenceCount,
+    };
+  }, [employees, logs]);
 
   if (!isAuthenticated) return <Login onLogin={() => setIsAuthenticated(true)} />;
 
   const handleTabChange = (tab: any) => {
     setActiveTab(tab);
-    setIsSidebarOpen(false); // Cerrar sidebar en móvil tras click
+    setIsSidebarOpen(false);
   };
 
   return (
     <div className="min-h-screen flex bg-slate-50 font-['Inter'] overflow-hidden relative">
-      {/* Overlay para móvil */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-30 md:hidden animate-in fade-in"
@@ -93,7 +139,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* Sidebar Responsivo */}
       <aside className={`
         fixed inset-y-0 left-0 w-80 bg-slate-900 text-white p-8 flex flex-col shadow-2xl z-40 shrink-0
         transition-transform duration-300 ease-in-out md:relative md:translate-x-0
@@ -152,7 +197,6 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      {/* Área de Contenido Principal */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-20 bg-white border-b px-6 md:px-10 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
@@ -163,7 +207,7 @@ const App: React.FC = () => {
               <MenuIcon className="w-6 h-6" />
             </button>
             <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">
-              {activeTab === 'config' ? 'Módulo Maestro' : 'BioAccess Enterprise • v4.0'}
+              BioAccess Enterprise • v4.0
             </div>
           </div>
           <button onClick={() => setIsAuthenticated(false)} className="text-rose-500 font-black text-[10px] uppercase tracking-widest hover:bg-rose-50 px-4 py-2 rounded-xl transition-all flex items-center gap-2">
