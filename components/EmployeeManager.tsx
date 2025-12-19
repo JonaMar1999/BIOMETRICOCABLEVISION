@@ -70,8 +70,8 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
             <UserPlus className="w-4 h-4" /> Registrar Nuevo
           </button>
         ) : (
-          <div className="bg-slate-100 text-slate-400 px-6 py-3 rounded-2xl flex items-center gap-2 font-black text-xs uppercase tracking-widest border border-slate-200 cursor-not-allowed">
-            <ShieldAlert className="w-4 h-4" /> Modo Lectura
+          <div className="bg-slate-100 text-slate-400 px-6 py-3 rounded-2xl flex items-center gap-2 font-black text-xs uppercase tracking-widest border border-slate-200 cursor-not-allowed italic">
+            <ShieldAlert className="w-4 h-4" /> Lectura Restringida
           </div>
         )}
       </header>
@@ -81,7 +81,7 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
         <input 
           type="text" 
           placeholder="Buscar por nombre o enroll ID..." 
-          className="flex-1 outline-none text-sm font-bold text-slate-700"
+          className="flex-1 outline-none text-sm font-bold text-slate-700 bg-transparent"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -112,15 +112,17 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
                 <td className="px-8 py-5">
                   <div className="flex items-center justify-center gap-2">
                     {canEdit ? (
-                      <button onClick={() => { setEditingEmployee(emp); setFormData({ enroll_number: emp.enroll_number, first_name: emp.first_name, last_name: emp.last_name || '', department: emp.department }); setIsModalOpen(true); }} className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors"><Edit className="w-4 h-4" /></button>
+                      <button onClick={() => { setEditingEmployee(emp); setFormData({ enroll_number: emp.enroll_number, first_name: emp.first_name, last_name: emp.last_name || '', department: emp.department }); setIsModalOpen(true); }} className="p-2.5 hover:bg-indigo-50 text-indigo-600 rounded-xl transition-all"><Edit className="w-4 h-4" /></button>
                     ) : (
-                      <div className="p-2 text-slate-200 cursor-not-allowed"><Edit className="w-4 h-4" /></div>
+                      <div className="p-2.5 text-slate-200 cursor-not-allowed opacity-30"><Edit className="w-4 h-4" /></div>
                     )}
                     
                     {canDelete ? (
-                      <button onClick={() => setConfirmDeleteId(emp.id)} className="p-2 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => setConfirmDeleteId(emp.id)} className="p-2.5 hover:bg-rose-50 text-rose-600 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
                     ) : (
-                      <div className="p-2 text-slate-200 cursor-not-allowed"><Trash2 className="w-4 h-4" /></div>
+                      <div className="p-2.5 text-slate-200 cursor-not-allowed opacity-30" title="Sin permiso para eliminar">
+                        <Trash2 className="w-4 h-4" />
+                      </div>
                     )}
                   </div>
                 </td>

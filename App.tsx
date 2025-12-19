@@ -31,19 +31,37 @@ const INITIAL_DEPARTMENTS: Department[] = [
 ];
 
 const INITIAL_ROLES: Role[] = [
-  { id: 'SuperAdmin', name: 'Super Administrador', permissions: PERMISSIONS.map(p => p.id), allowed_departments: ['DEP-001', 'DEP-002'], allowed_devices: ['ZK-T88-MAIN'] },
-  { id: 'RRHH', name: 'Recursos Humanos', permissions: ['view_reports', 'create_employee', 'edit_employee'], allowed_departments: ['DEP-002'], allowed_devices: ['ZK-T88-MAIN'] }
+  { 
+    id: 'SuperAdmin', 
+    name: 'Super Administrador', 
+    permissions: PERMISSIONS.map(p => p.id), 
+    allowed_departments: ['DEP-001', 'DEP-002'], 
+    allowed_devices: ['ZK-T88-MAIN'] 
+  },
+  { 
+    id: 'RRHH', 
+    name: 'Recursos Humanos', 
+    permissions: ['view_reports', 'create_employee', 'edit_employee'], 
+    allowed_departments: ['DEP-002'], 
+    allowed_devices: ['ZK-T88-MAIN'] 
+  }
 ];
 
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true); 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'reports' | 'config' | 'users' | 'departments'>('dashboard');
   
   const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
   const [logs, setLogs] = useState<AttendanceLog[]>(INITIAL_LOGS);
   const [departments, setDepartments] = useState<Department[]>(INITIAL_DEPARTMENTS);
   const [roles, setRoles] = useState<Role[]>(INITIAL_ROLES);
-  const [currentUser] = useState<User>({ username: 'admin_master', full_name: 'Jonathan Martinez', role: 'SuperAdmin' });
+  
+  // RESTAURACIÓN: Jonathan Martinez como Super Administrador
+  const [currentUser] = useState<User>({ 
+    username: 'admin_master', 
+    full_name: 'Jonathan Martinez', 
+    role: 'SuperAdmin' 
+  });
 
   // --- Lógica de Permisos Activos ---
   const userPermissions = useMemo(() => {
@@ -73,22 +91,28 @@ const App: React.FC = () => {
           <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-3xl transition-all ${activeTab === 'dashboard' ? 'bg-indigo-600 shadow-xl' : 'text-slate-500 hover:bg-slate-800'}`}>
             <LayoutDashboard className="w-5 h-5" /> <span className="font-bold text-sm">Panel</span>
           </button>
+          
           {can('view_monitor') && (
             <button onClick={() => setActiveTab('attendance')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-3xl transition-all ${activeTab === 'attendance' ? 'bg-indigo-600 shadow-xl' : 'text-slate-500 hover:bg-slate-800'}`}>
               <ClipboardList className="w-5 h-5" /> <span className="font-bold text-sm">Monitor</span>
             </button>
           )}
+
           <button onClick={() => setActiveTab('employees')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-3xl transition-all ${activeTab === 'employees' ? 'bg-indigo-600 shadow-xl' : 'text-slate-500 hover:bg-slate-800'}`}>
             <Users className="w-5 h-5" /> <span className="font-bold text-sm">Personal</span>
           </button>
+
           <button onClick={() => setActiveTab('departments')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-3xl transition-all ${activeTab === 'departments' ? 'bg-indigo-600 shadow-xl' : 'text-slate-500 hover:bg-slate-800'}`}>
             <Building2 className="w-5 h-5" /> <span className="font-bold text-sm">Zonas</span>
           </button>
+
           {can('view_reports') && (
             <button onClick={() => setActiveTab('reports')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-3xl transition-all ${activeTab === 'reports' ? 'bg-indigo-600 shadow-xl' : 'text-slate-500 hover:bg-slate-800'}`}>
               <BarChart3 className="w-5 h-5" /> <span className="font-bold text-sm">Reportes</span>
             </button>
           )}
+
+          {/* Restaurado acceso a Configuración */}
           {can('config_system') && (
             <button onClick={() => setActiveTab('config')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-3xl transition-all ${activeTab === 'config' ? 'bg-indigo-600 shadow-xl' : 'text-slate-500 hover:bg-slate-800'}`}>
               <Settings className="w-5 h-5" /> <span className="font-bold text-sm">Configuración</span>
@@ -96,15 +120,23 @@ const App: React.FC = () => {
           )}
         </nav>
 
+        {/* Badge de Identidad: Jonathan Martinez */}
         <div className="mt-auto bg-slate-800/50 p-6 rounded-[2rem] border border-slate-700/30 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center font-black text-xs">{currentUser.full_name.charAt(0)}</div>
-          <div><p className="font-bold text-xs">{currentUser.full_name}</p><p className="text-[9px] text-slate-500 font-black uppercase">{currentUser.role}</p></div>
+          <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center font-black text-xs text-white shadow-lg">
+            {currentUser.full_name.charAt(0)}
+          </div>
+          <div>
+            <p className="font-bold text-xs text-white">{currentUser.full_name}</p>
+            <p className="text-[9px] text-indigo-400 font-black uppercase tracking-widest">{currentUser.role.toUpperCase()}</p>
+          </div>
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-20 bg-white border-b px-10 flex items-center justify-between shrink-0">
-          <div className="text-xs font-black text-slate-400 uppercase">Arquitectura BioAccess • Sincronización Local</div>
+          <div className="text-xs font-black text-slate-400 uppercase tracking-widest">
+            {activeTab === 'config' ? 'Módulo Maestro de Configuración' : 'Arquitectura BioAccess • Control Total'}
+          </div>
           <button onClick={() => setIsAuthenticated(false)} className="text-rose-500 font-black text-[10px] uppercase tracking-widest hover:bg-rose-50 px-4 py-2 rounded-xl transition-all"><LogOut className="w-3 h-3 inline mr-2" /> Salir</button>
         </header>
 
