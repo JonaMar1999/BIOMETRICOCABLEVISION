@@ -11,6 +11,11 @@ export interface Role {
   permissions: string[];
 }
 
+export interface Department {
+  id: string;
+  name: string;
+}
+
 export interface Employee {
   id: number;
   enroll_number: string;
@@ -31,12 +36,13 @@ export interface AttendanceLog {
   department: string;
 }
 
-// Fix: Adding missing ReportItem interface used in components/Reports.tsx
 export interface ReportItem {
   date: string;
   enroll_number: string;
   first_name: string;
   last_name: string | null;
+  department: string;
+  device_id: string;
   in: string | null;
   out: string | null;
   hours_worked: string | number;

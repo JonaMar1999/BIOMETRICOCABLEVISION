@@ -2,9 +2,9 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Users, ClipboardList, BarChart3, Fingerprint, LayoutDashboard, 
-  ShieldCheck, Settings, LogOut, Search, Bell, AlertTriangle, X
+  ShieldCheck, Settings, LogOut, Search, Bell, AlertTriangle, X, Building2
 } from 'lucide-react';
-import { Employee, AttendanceLog, DashboardStats, User, Role } from './types';
+import { Employee, AttendanceLog, DashboardStats, User, Role, Department } from './types';
 import Dashboard from './components/Dashboard';
 import Monitor from './components/Monitor';
 import EmployeeManager from './components/EmployeeManager';
@@ -12,36 +12,43 @@ import Reports from './components/Reports';
 import UserRoles from './components/UserRoles';
 import Config from './components/Config';
 import Login from './components/Login';
+import DepartmentManager from './components/DepartmentManager';
 
 // --- FUENTE DE VERDAD: MOCK DATA INICIAL ---
 const INITIAL_EMPLOYEES: Employee[] = [
-  { id: 1, enroll_number: '1001', first_name: 'Jonathan', last_name: 'Martinez', department: 'Sistemas', status: 'active', created_at: '2024-01-15' },
-  { id: 2, enroll_number: '1002', first_name: 'Ana', last_name: 'García', department: 'RRHH', status: 'active', created_at: '2024-02-10' },
-  { id: 3, enroll_number: '1003', first_name: 'Carlos', last_name: 'Ruiz', department: 'Operaciones', status: 'active', created_at: '2024-03-01' },
-  { id: 4, enroll_number: '1004', first_name: 'Elena', last_name: 'Pérez', department: 'Administración', status: 'active', created_at: '2024-03-12' },
-  { id: 5, enroll_number: '1005', first_name: 'Marcos', last_name: 'Solis', department: 'Sistemas', status: 'active', created_at: '2024-04-05' },
+  { id: 1, enroll_number: '1001', first_name: 'Jonathan', last_name: 'Martinez', department: 'DEP-001', status: 'active', created_at: '2024-01-15' },
+  { id: 2, enroll_number: '1002', first_name: 'Ana', last_name: 'García', department: 'DEP-002', status: 'active', created_at: '2024-02-10' },
+  { id: 3, enroll_number: '1003', first_name: 'Carlos', last_name: 'Ruiz', department: 'DEP-003', status: 'active', created_at: '2024-03-01' },
+  { id: 4, enroll_number: '1004', first_name: 'Elena', last_name: 'Pérez', department: 'DEP-004', status: 'active', created_at: '2024-03-12' },
+  { id: 5, enroll_number: '1005', first_name: 'Marcos', last_name: 'Solis', department: 'DEP-001', status: 'active', created_at: '2024-04-05' },
 ];
 
 const INITIAL_LOGS: AttendanceLog[] = [
-  { id: 1, enroll_number: '1001', first_name: 'Jonathan', att_time: '2024-05-20T08:05:22', status: 0, device_id: 'ZK-T88-MAIN', department: 'Sistemas' },
-  { id: 2, enroll_number: '1002', first_name: 'Ana', att_time: '2024-05-20T08:12:10', status: 0, device_id: 'ZK-T88-MAIN', department: 'RRHH' },
-  { id: 3, enroll_number: '1003', first_name: 'Carlos', att_time: '2024-05-20T08:15:45', status: 0, device_id: 'ZK-F22-LAB', department: 'Operaciones' },
-  { id: 4, enroll_number: '1001', first_name: 'Jonathan', att_time: '2024-05-20T13:02:11', status: 1, device_id: 'ZK-T88-MAIN', department: 'Sistemas' },
-  { id: 5, enroll_number: '1004', first_name: 'Elena', att_time: '2024-05-20T14:10:00', status: 0, device_id: 'ZK-T88-MAIN', department: 'Administración' },
-  { id: 6, enroll_number: '1005', first_name: 'Marcos', att_time: '2024-05-21T08:02:00', status: 0, device_id: 'ZK-F22-LAB', department: 'Sistemas' },
+  { id: 1, enroll_number: '1001', first_name: 'Jonathan', att_time: '2024-05-20T08:05:22', status: 0, device_id: 'ZK-T88-MAIN', department: 'DEP-001' },
+  { id: 2, enroll_number: '1002', first_name: 'Ana', att_time: '2024-05-20T08:12:10', status: 0, device_id: 'ZK-T88-MAIN', department: 'DEP-002' },
+  { id: 3, enroll_number: '1003', first_name: 'Carlos', att_time: '2024-05-20T08:15:45', status: 0, device_id: 'ZK-F22-LAB', department: 'DEP-003' },
+  { id: 4, enroll_number: '1001', first_name: 'Jonathan', att_time: '2024-05-20T13:02:11', status: 1, device_id: 'ZK-T88-MAIN', department: 'DEP-001' },
+  { id: 5, enroll_number: '1004', first_name: 'Elena', att_time: '2024-05-20T14:10:00', status: 0, device_id: 'ZK-T88-MAIN', department: 'DEP-004' },
+  { id: 6, enroll_number: '1005', first_name: 'Marcos', att_time: '2024-05-21T08:02:00', status: 0, device_id: 'ZK-F22-LAB', department: 'DEP-001' },
+];
+
+const INITIAL_DEPARTMENTS: Department[] = [
+  { id: 'DEP-001', name: 'Sistemas' },
+  { id: 'DEP-002', name: 'RRHH' },
+  { id: 'DEP-003', name: 'Operaciones' },
+  { id: 'DEP-004', name: 'Administración' },
 ];
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'reports' | 'config' | 'users'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'attendance' | 'employees' | 'reports' | 'config' | 'users' | 'departments'>('dashboard');
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   
-  // Estados centralizados para simular base de datos
   const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
   const [logs, setLogs] = useState<AttendanceLog[]>(INITIAL_LOGS);
+  const [departments, setDepartments] = useState<Department[]>(INITIAL_DEPARTMENTS);
   const [currentUser] = useState<User>({ username: 'admin_master', full_name: 'Jonathan Martinez', role: 'SuperAdmin' });
 
-  // Estadísticas calculadas en tiempo real
   const stats: DashboardStats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     return {
@@ -51,7 +58,6 @@ const App: React.FC = () => {
     };
   }, [employees, logs]);
 
-  // Lógica de Alertas Recientes para el Panel de Notificaciones
   const alerts = useMemo(() => {
     return logs
       .filter(l => l.status === 0 && l.att_time.split('T')[1] > "08:00:00")
@@ -61,7 +67,7 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    setActiveTab('dashboard'); // Reset tab on logout
+    setActiveTab('dashboard');
   };
 
   if (!isAuthenticated) {
@@ -70,7 +76,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 overflow-hidden font-['Inter'] animate-in fade-in duration-700">
-      {/* SIDEBAR DE NAVEGACIÓN PROFESIONAL */}
       <aside className="w-full md:w-80 bg-slate-900 text-white p-8 shrink-0 flex flex-col shadow-2xl z-20 overflow-y-auto transition-all">
         <div className="flex items-center gap-4 mb-14 px-2">
           <div className="bg-indigo-500 p-3 rounded-2xl shadow-xl shadow-indigo-900/50">
@@ -95,6 +100,10 @@ const App: React.FC = () => {
 
           <button onClick={() => setActiveTab('employees')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] transition-all duration-300 ${activeTab === 'employees' ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-900/40 translate-x-2' : 'text-slate-500 hover:bg-slate-800 hover:text-white'}`}>
             <Users className="w-5 h-5" /> <span className="font-bold text-sm">Personal</span>
+          </button>
+
+          <button onClick={() => setActiveTab('departments')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] transition-all duration-300 ${activeTab === 'departments' ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-900/40 translate-x-2' : 'text-slate-500 hover:bg-slate-800 hover:text-white'}`}>
+            <Building2 className="w-5 h-5" /> <span className="font-bold text-sm">Departamentos</span>
           </button>
 
           <button onClick={() => setActiveTab('reports')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-[1.5rem] transition-all duration-300 ${activeTab === 'reports' ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-900/40 translate-x-2' : 'text-slate-500 hover:bg-slate-800 hover:text-white'}`}>
@@ -131,17 +140,13 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      {/* ÁREA DE CONTENIDO PRINCIPAL */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* TOP NAVBAR */}
         <header className="h-20 bg-white border-b border-slate-200 px-10 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4 bg-slate-50 px-6 py-2.5 rounded-2xl border border-slate-100 w-full max-w-md">
             <Search className="w-4 h-4 text-slate-400" />
             <input type="text" placeholder="Buscar en el sistema..." className="bg-transparent outline-none text-xs font-bold text-slate-600 w-full" />
           </div>
           <div className="flex items-center gap-6">
-            
-            {/* BOTÓN CAMPANA Y PANEL DE NOTIFICACIONES */}
             <div className="relative">
               <button 
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
@@ -173,20 +178,10 @@ const App: React.FC = () => {
                         </div>
                       </div>
                     ))}
-                    {alerts.length === 0 && (
-                      <div className="p-10 text-center space-y-3 opacity-20">
-                        <Bell className="w-8 h-8 mx-auto" />
-                        <p className="text-[10px] font-black uppercase tracking-widest">Sin notificaciones nuevas</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4 bg-slate-50 border-t border-slate-100">
-                     <button onClick={() => setIsNotificationsOpen(false)} className="w-full py-3 bg-white border border-slate-200 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 transition-colors">Cerrar Panel</button>
                   </div>
                 </div>
               )}
             </div>
-
             <div className="h-8 w-[1px] bg-slate-200 mx-2"></div>
             <div className="flex flex-col items-end">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Biometric Engine</p>
@@ -211,26 +206,32 @@ const App: React.FC = () => {
           {activeTab === 'employees' && (
             <EmployeeManager 
               employees={employees} 
-              setEmployees={setEmployees} 
+              setEmployees={setEmployees}
+              departments={departments}
+            />
+          )}
+          {activeTab === 'departments' && (
+            <DepartmentManager 
+              departments={departments} 
+              setDepartments={setDepartments}
             />
           )}
           {activeTab === 'reports' && (
             <Reports 
               logs={logs} 
               employees={employees} 
+              departments={departments}
             />
           )}
           {activeTab === 'users' && <UserRoles />}
-          {activeTab === 'config' && <Config />}
+          {activeTab === 'config' && (
+            <Config 
+              departments={departments}
+              setDepartments={setDepartments}
+            />
+          )}
         </main>
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
-      `}} />
     </div>
   );
 };

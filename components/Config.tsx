@@ -1,14 +1,23 @@
 
 import React, { useState } from 'react';
-import { Settings, Mail, Bell, Building2, Save, CloudUpload, Clock, CalendarDays } from 'lucide-react';
+import { 
+  Settings, Mail, Bell, Building2, Save, CloudUpload, Clock, 
+  CalendarDays, Map, Plus, Edit2, Trash2, Check, X 
+} from 'lucide-react';
+import { Department } from '../types';
 
-const Config: React.FC = () => {
+interface ConfigProps {
+  departments: Department[];
+  setDepartments: React.Dispatch<React.SetStateAction<Department[]>>;
+}
+
+const Config: React.FC<ConfigProps> = ({ departments, setDepartments }) => {
   const [config, setConfig] = useState({
     company_name: 'BioAccess Enterprise',
     auto_reports: true,
     emails: 'admin@bioaccess.com, rrhh@bioaccess.com',
     sync_interval: '5',
-    selected_days: [1, 2, 3, 4, 5], // 1=Lunes, 7=Domingo. Default: L-V
+    selected_days: [1, 2, 3, 4, 5], // 1=Lunes, 7=Domingo
     report_time: '08:00'
   });
 
@@ -108,7 +117,6 @@ const Config: React.FC = () => {
                       value={config.emails} onChange={e => setConfig({...config, emails: e.target.value})}></textarea>
                  </div>
 
-                 {/* SELECTOR VISUAL DE DÍAS SEMANALES */}
                  <div className="space-y-4">
                     <div>
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Programación Semanal (Días de Envío)</label>

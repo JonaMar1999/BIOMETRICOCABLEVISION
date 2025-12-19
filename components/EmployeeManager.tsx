@@ -1,14 +1,15 @@
 
 import React, { useState } from 'react';
-import { Employee } from '../types';
+import { Employee, Department } from '../types';
 import { Edit, Trash2, X, Save, Search, UserPlus } from 'lucide-react';
 
 interface EmployeeManagerProps {
   employees: Employee[];
   setEmployees: React.Dispatch<React.SetStateAction<Employee[]>>;
+  departments: Department[];
 }
 
-const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmployees }) => {
+const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmployees, departments }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [formData, setFormData] = useState({ enroll_number: '', first_name: '', last_name: '', department: '' });
@@ -144,10 +145,9 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, setEmploye
                   <select required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors font-bold cursor-pointer" 
                     value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})}>
                     <option value="">Seleccionar...</option>
-                    <option value="Administración">Administración</option>
-                    <option value="Operaciones">Operaciones</option>
-                    <option value="Sistemas">Sistemas</option>
-                    <option value="RRHH">RRHH</option>
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>

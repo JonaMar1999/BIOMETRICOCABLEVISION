@@ -1,14 +1,15 @@
 
 import React, { useState, useMemo } from 'react';
-import { AttendanceLog, Employee, ReportItem } from '../types';
+import { AttendanceLog, Employee, ReportItem, Department } from '../types';
 import { Calendar, FileText, Filter, Users, Table as TableIcon, Monitor as DeviceIcon, Building2, FileDown } from 'lucide-react';
 
 interface ReportsProps {
   logs: AttendanceLog[];
   employees: Employee[];
+  departments: Department[];
 }
 
-const Reports: React.FC<ReportsProps> = ({ logs, employees }) => {
+const Reports: React.FC<ReportsProps> = ({ logs, employees, departments }) => {
   const [filters, setFilters] = useState({
     start: '2024-05-20',
     end: '2024-05-21',
@@ -42,6 +43,8 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees }) => {
           enroll_number: log.enroll_number,
           first_name: log.first_name,
           last_name: '',
+          department: log.department,
+          device_id: log.device_id,
           in: null,
           out: null,
           hours_worked: 0
@@ -66,8 +69,11 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees }) => {
   }, [logs, filters]);
 
   const handleExportCSV = () => {
-    const headers = "Fecha,Enroll ID,Nombre,Entrada,Salida,Horas\n";
-    const csv = reportData.map(i => `${i.date},${i.enroll_number},${i.first_name},${i.in || ''},${i.out || ''},${i.hours_worked}`).join('\n');
+    const headers = "Fecha,Enroll ID,Nombre,Departamento,Entrada,Salida,Biométrico,Horas\n";
+    const csv = reportData.map(i => {
+      const deptName = departments.find(d => d.id === i.department)?.name || i.department;
+      return `${i.date},${i.enroll_number},${i.first_name},${deptName},${i.in || ''},${i.out || ''},${i.device_id},${i.hours_worked}`;
+    }).join('\n');
     const blob = new Blob([headers + csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -78,7 +84,6 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees }) => {
 
   const handleExportPDF = () => {
     alert("Generando documento PDF... Esta función requiere la librería jsPDF. El motor de BioAccess está procesando los datos para la descarga.");
-    // Aquí se integraría jsPDF en un entorno real
   };
 
   return (
@@ -104,7 +109,7 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees }) => {
         </div>
       </header>
 
-      {/* FILTRO AVANZADO RESTAURADO */}
+      {/* FILTRO AVANZADO */}
       <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm space-y-6">
         <div className="flex items-center gap-2 mb-2">
           <Filter className="w-4 h-4 text-indigo-500" />
@@ -147,10 +152,9 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees }) => {
               <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3 outline-none font-bold cursor-pointer" 
                 value={filters.department} onChange={e => setFilters({...filters, department: e.target.value})}>
                 <option value="all">Toda la empresa</option>
-                <option value="Sistemas">Sistemas</option>
-                <option value="RRHH">RRHH</option>
-                <option value="Operaciones">Operaciones</option>
-                <option value="Administración">Administración</option>
+                {departments.map(dept => (
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -168,21 +172,33 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees }) => {
             <tr>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Empleado</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Departamento</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Entrada</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Salida</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Biométrico</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Horas</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {reportData.map((item, idx) => (
               <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                <td className="px-8 py-5 font-bold text-slate-600 text-sm">{item.date}</td>
+                <td className="px-8 py-5 font-bold text-slate-600 text-sm whitespace-nowrap">{item.date}</td>
                 <td className="px-8 py-5">
                   <p className="font-bold text-slate-800">{item.first_name}</p>
                   <span className="text-[10px] font-bold text-slate-400 uppercase">ID: {item.enroll_number}</span>
                 </td>
+                <td className="px-8 py-5">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-lg">
+                    {departments.find(d => d.id === item.department)?.name || item.department}
+                  </span>
+                </td>
                 <td className="px-8 py-5 text-emerald-600 font-bold text-sm">{item.in ? new Date(item.in).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'}</td>
                 <td className="px-8 py-5 text-orange-600 font-bold text-sm">{item.out ? new Date(item.out).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--'}</td>
+                <td className="px-8 py-5">
+                  <span className="text-[10px] font-black text-indigo-500 uppercase bg-indigo-50 px-3 py-1 rounded-lg">
+                    {item.device_id.split('-')[0]}
+                  </span>
+                </td>
                 <td className="px-8 py-5 text-center">
                   <span className={`px-4 py-1.5 rounded-full font-black text-xs ${parseFloat(item.hours_worked as string) > 8 ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
                     {item.hours_worked}h
@@ -191,7 +207,7 @@ const Reports: React.FC<ReportsProps> = ({ logs, employees }) => {
               </tr>
             ))}
             {reportData.length === 0 && (
-              <tr><td colSpan={5} className="p-20 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">Sin registros para el filtro aplicado</td></tr>
+              <tr><td colSpan={7} className="p-20 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">Sin registros para el filtro aplicado</td></tr>
             )}
           </tbody>
         </table>
